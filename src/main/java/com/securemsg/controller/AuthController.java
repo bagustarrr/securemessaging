@@ -1,70 +1,55 @@
 package com.securemsg.controller;
 
-import com.securemsg.model.User;
 import com.securemsg.service.UserService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 @Controller
-@RequiredArgsConstructor
 public class AuthController {
+
     private final UserService userService;
 
+    public AuthController(UserService userService) {
+        this.userService = userService;
+    }
+
+    // Главная страница -> перенаправление на /chat
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/chat";
+    }
+
+    // Страница входа (если уже вошел — редирект на чат)
     @GetMapping("/login")
-    public String loginPage(Model model, Authentication authentication,
-                            @RequestParam(value = "error", required = false) String error,
-                            @RequestParam(value = "logout", required = false) String logout,
-                            @RequestParam(value = "registered", required = false) String registered) {
-        // If already logged in, skip login page
-        if (authentication != null && authentication.isAuthenticated()) {
+    public String loginPage(Authentication authentication) {
+        if (authentication != null &&
+                authentication.isAuthenticated() &&
+                !(authentication instanceof AnonymousAuthenticationToken)) {
             return "redirect:/chat";
-        }
-        if (error != null) {
-            model.addAttribute("errorMsg", "invalid");  // key for "Invalid IIN or password"
-        }
-        if (logout != null) {
-            model.addAttribute("successMsg", "logoutSuccess");  // key for logout success message
-        }
-        if (registered != null) {
-            model.addAttribute("successMsg", "registeredSuccess"); // key for registration success msg
         }
         return "login";
     }
 
+    // Страница регистрации
     @GetMapping("/register")
-    public String registerPage(Model model, Authentication authentication) {
-        if (authentication != null && authentication.isAuthenticated()) {
-            return "redirect:/";
-        }
-        model.addAttribute("user", new User());
+    public String registerPage() {
         return "register";
     }
 
+    // Обработка формы регистрации
     @PostMapping("/register")
-    public String registerUser(@ModelAttribute("user") @Valid User formUser,
-                               BindingResult bindingResult,
-                               @RequestParam("confirmPassword") String confirmPassword,
-                               Model model) {
-        if (bindingResult.hasErrors()) {
-            model.addAttribute("error", "validationError");  // generic validation error message key
-            return "register";
+    public String registerUser(@RequestParam String name,
+                               @RequestParam String email,
+                               @RequestParam String password,
+                               @RequestParam String confirmPassword) {
+        if (!password.equals(confirmPassword)) {
+            return "redirect:/register?error=nomatch";
         }
-        if (!formUser.getPassword().equals(confirmPassword)) {
-            model.addAttribute("error", "passwordsNoMatch");  // key for "Passwords do not match"
-            return "register";
+        if (userService.register(name, email, password).isEmpty()) {
+            return "redirect:/register?error=exists";
         }
-        try {
-            userService.registerUser(formUser);
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
-            return "register";
-        }
-        // Registration successful – redirect to login page with flag
         return "redirect:/login?registered";
     }
 }

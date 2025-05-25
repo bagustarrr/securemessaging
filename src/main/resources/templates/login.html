@@ -1,48 +1,65 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
 <head>
-  <title>SecureMsg – Login</title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.1.3/dist/darkly/bootstrap.min.css" />
-  <link th:href="@{/css/style.css}" rel="stylesheet" />
+  <meta charset="UTF-8">
+  <title th:text="#{login.title}">Login</title>
+  <link th:href="@{/css/main.css}" rel="stylesheet"/>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
 </head>
-<body class="bg-dark text-light">
-<div class="container h-100 d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-  <div class="card bg-secondary text-light p-4" style="min-width: 320px;">
-    <h2 class="text-center mb-4">SecureMsg Login</h2>
+<body>
+<div class="container py-5">
+  <h2 class="text-center mb-4" th:text="#{login.title}">Login</h2>
 
-    <!-- Error Message -->
-    <div th:if="${param.error}" class="alert alert-danger">
-      Invalid IIN or password. Please try again.
+  <!-- Сообщения -->
+  <div th:if="${param.error}" class="alert alert-danger text-center" th:text="#{login.error}">
+    Invalid email or password
+  </div>
+  <div th:if="${param.logout}" class="alert alert-info text-center" th:text="#{login.loggedOut}">
+    You have been logged out.
+  </div>
+  <div th:if="${param.registered}" class="alert alert-success text-center" th:text="#{register.success}">
+    Registration successful. Please log in.
+  </div>
+
+  <!-- Форма -->
+  <div class="row justify-content-center">
+    <div class="col-md-4">
+      <form th:action="@{/login}" method="post" class="card p-3 shadow">
+        <div class="mb-3">
+          <label for="username" th:text="#{label.email}">Email</label>
+          <input type="email" id="username" name="username" class="form-control" required placeholder="Email"/>
+        </div>
+        <div class="mb-3">
+          <label for="password" th:text="#{label.password}">Password</label>
+          <input type="password" id="password" name="password" class="form-control" required placeholder="********"/>
+        </div>
+        <div th:if="${_csrf != null}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        </div>
+        <button type="submit" class="btn btn-primary w-100" th:text="#{button.login}">Login</button>
+      </form>
+
+      <p class="text-center mt-3">
+        <span th:text="#{register.prompt}">No account?</span>
+        <a th:href="@{/register}" th:text="#{button.register}">Register</a>
+      </p>
+
+      <!-- Языки -->
+      <p class="text-center text-muted mt-4">
+        <span th:text="#{label.language}">Language</span>:
+        <a th:href="@{/login(lang='en')}" class="me-2">EN</a>
+        <a th:href="@{/login(lang='ru')}" class="me-2">RU</a>
+        <a th:href="@{/login(lang='kk')}">KK</a>
+      </p>
     </div>
-
-    <!-- Success message (e.g. after registration or logout) -->
-    <div th:if="${param.logout}" class="alert alert-success">You have been logged out.</div>
-    <div th:if="${param.registered}" class="alert alert-success">Registration successful! You may now log in.</div>
-
-    <!-- Login form -->
-    <form th:action="@{/login}" method="post">
-      <div class="mb-3">
-        <label for="iin" class="form-label">IIN</label>
-        <input type="text" name="iin" id="iin" class="form-control" maxlength="12"
-               placeholder="Enter your IIN" required pattern="[0-9]{12}" title="12-digit IIN" />
-      </div>
-      <div class="mb-3">
-        <label for="password" class="form-label">Password</label>
-        <input type="password" name="password" id="password" class="form-control"
-               placeholder="Enter your password" required />
-      </div>
-
-      <!-- CSRF token -->
-      <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-      <button type="submit" class="btn btn-primary w-100">Login</button>
-    </form>
-
-    <p class="text-center mt-3">
-      <a th:href="@{/register}" class="text-light">Create an account</a>
-    </p>
   </div>
 </div>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO"
+        crossorigin="anonymous"></script>
 </body>
 </html>

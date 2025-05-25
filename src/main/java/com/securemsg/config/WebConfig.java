@@ -1,11 +1,12 @@
 package com.securemsg.config;
 
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.web.servlet.LocaleResolver;
-import org.springframework.web.servlet.i18n.CookieLocaleResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 
 import java.util.Locale;
@@ -13,26 +14,34 @@ import java.util.Locale;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    // Используем AcceptHeaderLocaleResolver вместо SessionLocaleResolver
     @Bean
     public LocaleResolver localeResolver() {
-        // Use a cookie to store locale (so it persists between sessions)
-        CookieLocaleResolver cookieLocaleResolver = new CookieLocaleResolver();
-        cookieLocaleResolver.setDefaultLocale(new Locale("en"));  // default to English
-        cookieLocaleResolver.setCookieName("lang");               // cookie name for locale
-        return cookieLocaleResolver;
+        AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
+        resolver.setDefaultLocale(Locale.forLanguageTag("ru")); // язык по умолчанию
+        return resolver;
     }
 
+    // Перехватчик, позволяющий менять язык через параметр lang (например, ?lang=en)
     @Bean
     public LocaleChangeInterceptor localeChangeInterceptor() {
-        // Interceptor that allows changing the locale by the 'lang' parameter
         LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
-        interceptor.setParamName("lang");  // e.g., ?lang=en or ?lang=ru or ?lang=kz
+        interceptor.setParamName("lang"); // параметр в URL
         return interceptor;
     }
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Register the locale change interceptor
         registry.addInterceptor(localeChangeInterceptor());
+    }
+
+    // Подключение файлов локализации messages.properties
+    @Bean
+    public ResourceBundleMessageSource messageSource() {
+        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+        source.setBasename("messages");
+        source.setDefaultEncoding("UTF-8");
+        source.setUseCodeAsDefaultMessage(true); // если ключ не найден — выводим ключ
+        return source;
     }
 }

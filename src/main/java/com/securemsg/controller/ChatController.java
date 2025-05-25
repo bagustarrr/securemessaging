@@ -1,87 +1,106 @@
 package com.securemsg.controller;
 
-import com.securemsg.model.ChatRoom;
-import com.securemsg.model.Message;
+import com.securemsg.model.Chat;
 import com.securemsg.model.User;
+import com.securemsg.model.Message;
 import com.securemsg.service.ChatService;
 import com.securemsg.service.MessageService;
-import com.securemsg.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import com.securemsg.service.UserService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.*;
 
+// Контроллер страницы чата и личных сообщений
 @Controller
-@RequiredArgsConstructor
 public class ChatController {
     private final ChatService chatService;
     private final MessageService messageService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
+    public ChatController(ChatService chatService, MessageService messageService, UserService userService) {
+        this.chatService = chatService;
+        this.messageService = messageService;
+        this.userService = userService;
+    }
+
+    // Страница чатов
     @GetMapping("/chat")
-    public String chatHome(@AuthenticationPrincipal User currentUser, Model model) {
-        // List all chats for this user (to display in sidebar)
-        List<ChatRoom> chats = chatService.getChatsForUser(currentUser.getIin());
-        model.addAttribute("currentUser", currentUser);
+    public String chatPage(@AuthenticationPrincipal User currentUser,
+                           @RequestParam(required = false) String chatId,
+                           Model model) {
+        String currentUserId = currentUser.getId();
+        // Все чаты пользователя
+        List<Chat> chats = chatService.getChatsForUser(currentUserId);
         model.addAttribute("chats", chats);
-        model.addAttribute("selectedChat", null);
-        return "chat";
-    }
+        model.addAttribute("user", currentUser);
+        // Имена чатов (для групп - название, для личных - имя собеседника)
+        Map<String, String> chatNames = new HashMap<>();
+        for (Chat chat : chats) {
+            if ("GROUP".equals(chat.getType())) {
+                chatNames.put(chat.getId(), chat.getName());
+            } else if ("PRIVATE".equals(chat.getType())) {
+                String otherName = "";
+                for (String uid : chat.getParticipants()) {
+                    if (!uid.equals(currentUserId)) {
+                        otherName = userService.getNameById(uid);
+                        break;
+                    }
+                }
+                chatNames.put(chat.getId(), otherName);
+            }
+        }
+        model.addAttribute("chatNames", chatNames);
 
-    @GetMapping("/chat/{chatId}")
-    public String openChat(@AuthenticationPrincipal User currentUser,
-                           @PathVariable String chatId, Model model) {
-        // Ensure the user has access to this chat
-        ChatRoom chatRoom;
-        try {
-            chatRoom = chatService.getChatForUser(chatId, currentUser.getIin());
-        } catch (IllegalArgumentException e) {
-            // Chat not found or user not in chat -> redirect to error page or home
-            return "redirect:/error";
+        // Если чат не указан и есть чаты - перенаправляем на первый
+        if (chatId == null || chatId.isEmpty()) {
+            if (!chats.isEmpty()) {
+                return "redirect:/chat?chatId=" + chats.get(0).getId();
+            } else {
+                return "chat";
+            }
         }
-        // Load messages in this chat
-        List<Message> messages = messageService.getMessagesForChat(chatId);
-        // Determine chat title for display
-        String chatTitle;
-        if ("GROUP".equals(chatRoom.getType())) {
-            chatTitle = chatRoom.getName();
-        } else {
-            // For private chat, find the other participant's name
-            String otherIIN = chatRoom.getParticipants().stream()
-                    .filter(iin -> !iin.equals(currentUser.getIin()))
-                    .findFirst().orElse(currentUser.getIin());
-            User otherUser = userRepository.findById(otherIIN).orElse(null);
-            chatTitle = (otherUser != null ? otherUser.getFullName() : "Private Chat");
+
+        // Проверяем доступ к запрошенному чату
+        Optional<Chat> chatOpt = chatService.getChatForUser(chatId, currentUserId);
+        if (chatOpt.isEmpty()) {
+            if (!chats.isEmpty()) {
+                return "redirect:/chat";
+            } else {
+                return "chat";
+            }
         }
-        // Prepare model for view
-        List<ChatRoom> chats = chatService.getChatsForUser(currentUser.getIin());
-        model.addAttribute("currentUser", currentUser);
-        model.addAttribute("chats", chats);
-        model.addAttribute("selectedChat", chatRoom);
-        model.addAttribute("chatTitle", chatTitle);
+
+        // Готовим данные выбранного чата
+        Chat chat = chatOpt.get();
+        model.addAttribute("chat", chat);
+        String chatDisplayName = chatNames.get(chat.getId());
+        model.addAttribute("currentChatName", chatDisplayName);
+        // Сообщения чата
+        List<Message> messages = messageService.getMessagesByChatId(chat.getId());
         model.addAttribute("messages", messages);
+
         return "chat";
     }
 
+    // Создание нового личного чата (по email пользователя)
     @PostMapping("/chat/new")
-    public String startNewChat(@AuthenticationPrincipal User currentUser,
-                               @RequestParam("otherIIN") String otherIIN) {
-        if (otherIIN == null || otherIIN.isBlank()) {
+    public String newPersonalChat(@AuthenticationPrincipal User currentUser,
+                                  @RequestParam("email") String otherEmail) {
+        if (otherEmail == null || otherEmail.trim().isEmpty()) {
             return "redirect:/chat";
         }
-        if (otherIIN.equals(currentUser.getIin())) {
-            // Cannot start a chat with oneself
-            return "redirect:/chat?errorSelf";
+        if (otherEmail.equalsIgnoreCase(currentUser.getEmail())) {
+            return "redirect:/chat?error=self";
         }
-        // Check that target user exists
-        if (!userRepository.existsById(otherIIN)) {
-            return "redirect:/chat?errorUserNotFound";
+        Optional<User> otherUserOpt = userService.findByEmail(otherEmail);
+        if (otherUserOpt.isEmpty()) {
+            return "redirect:/chat?error=nouser";
         }
-        // Create or get existing private chat then redirect to it
-        ChatRoom chatRoom = chatService.getOrCreatePrivateChat(currentUser.getIin(), otherIIN);
-        return "redirect:/chat/" + chatRoom.getId();
+        User otherUser = otherUserOpt.get();
+        Chat chat = chatService.getOrCreatePrivateChat(currentUser.getId(), otherUser.getId());
+        return "redirect:/chat?chatId=" + chat.getId();
     }
 }

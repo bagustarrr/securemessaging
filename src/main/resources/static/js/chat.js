@@ -1,6 +1,8 @@
 // Establish WebSocket connection using SockJS and STOMP
 const socket = new SockJS('/ws');
 const stompClient = Stomp.over(socket);
+
+// Get references to data passed from Thymeleaf
 const chatInfoDiv = document.getElementById('chatInfo');
 const currentChatId = chatInfoDiv.dataset.chatId;
 const currentChatType = chatInfoDiv.dataset.chatType;
@@ -9,18 +11,18 @@ const currentUserIIN = chatInfoDiv.dataset.currentUser;
 // Connect and set up subscriptions
 stompClient.connect({}, function (frame) {
     console.log("Connected: " + frame);
-    // Subscribe to personal queue for private messages
+    // Subscribe to personal queue for incoming private messages
     stompClient.subscribe('/user/queue/messages', function (message) {
         const msg = JSON.parse(message.body);
+        // If message is for a different chat than the one currently open, we could handle notifications.
         if (!currentChatId || msg.chatId !== currentChatId) {
-            // If message belongs to a different chat (not currently open), we could notify or ignore
             console.log("New message for another chat:", msg);
-            // Optionally, update sidebar or highlight chat item for unread.
+            // TODO: highlight chat in sidebar or show notification (not implemented here)
             return;
         }
         displayMessage(msg);
     });
-    // If current chat is a group, subscribe to its topic
+    // If current chat is a group, subscribe to its topic for group messages
     if (currentChatType === 'GROUP' && currentChatId) {
         stompClient.subscribe('/topic/chatroom/' + currentChatId, function (message) {
             const msg = JSON.parse(message.body);
@@ -33,7 +35,6 @@ stompClient.connect({}, function (frame) {
 function displayMessage(msg) {
     const messageArea = document.getElementById('messageArea');
     if (!messageArea) return;
-    // Create message div
     const messageDiv = document.createElement('div');
     let text;
     if (msg.sender === currentUserIIN) {
@@ -42,23 +43,25 @@ function displayMessage(msg) {
         messageDiv.className = "message my-message";
     } else {
         // Message from another user
-        text = msg.senderName + ": " + msg.content;
+        // Use senderName if available (else fallback to sender IIN)
+        const name = msg.senderName || msg.sender;
+        text = name + ": " + msg.content;
         messageDiv.className = "message their-message";
     }
     messageDiv.textContent = text;
     messageArea.appendChild(messageDiv);
-    // Scroll to bottom
+    // Auto-scroll to bottom
     messageArea.scrollTop = messageArea.scrollHeight;
 }
 
-// Send a message (called on form submit)
+// Send a message (called when message form is submitted)
 function sendMessage() {
     const input = document.getElementById('messageInput');
     if (!input || !input.value.trim()) {
         return;
     }
     const content = input.value.trim();
-    // Determine destination (unified endpoint "/app/chat" handles both private and group)
+    // Send the message to the server endpoint
     stompClient.send("/app/chat", {}, JSON.stringify({chatId: currentChatId, content: content}));
     input.value = "";
 }

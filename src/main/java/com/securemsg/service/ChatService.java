@@ -1,82 +1,113 @@
 package com.securemsg.service;
 
-import com.securemsg.model.ChatRoom;
-import com.securemsg.repository.ChatRoomRepository;
-import lombok.RequiredArgsConstructor;
+import com.securemsg.model.Chat;
+import com.securemsg.model.User;
+import com.securemsg.repository.ChatRepository;
+import com.securemsg.repository.MessageRepository;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+// Сервис управления чатами
 @Service
-@RequiredArgsConstructor
 public class ChatService {
-    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRepository chatRepository;
+    private final MessageRepository messageRepository;
 
-    public List<ChatRoom> getChatsForUser(String userIin) {
-        // Find all chatrooms where this user is listed as a participant
-        return chatRoomRepository.findByParticipantsContaining(userIin);
+    public ChatService(ChatRepository chatRepository, MessageRepository messageRepository) {
+        this.chatRepository = chatRepository;
+        this.messageRepository = messageRepository;
     }
 
-    public ChatRoom getOrCreatePrivateChat(String userIin1, String userIin2) {
-        // Check if a private chat between these two already exists
-        List<ChatRoom> possibleChats = chatRoomRepository.findByParticipantsContaining(userIin1);
-        for (ChatRoom chat : possibleChats) {
-            if ("PRIVATE".equals(chat.getType())
-                    && chat.getParticipants().contains(userIin2)
-                    && chat.getParticipants().size() == 2) {
-                return chat;
-            }
+    // Все чаты, в которых состоит пользователь
+    public List<Chat> getChatsForUser(String userId) {
+        return chatRepository.findByParticipantsContaining(userId);
+    }
+
+    // Получить или создать личный чат между двумя пользователями
+    public Chat getOrCreatePrivateChat(String userId1, String userId2) {
+        // Проверяем существование
+        Optional<Chat> existing = chatRepository.findPrivateChat(userId1, userId2);
+        if (existing.isPresent()) {
+            return existing.get();
         }
-        // Create new private chat
-        ChatRoom newChat = new ChatRoom();
-        newChat.setType("PRIVATE");
-        newChat.setName(null);
+        // Создаем новый приватный чат
+        Chat chat = new Chat();
+        chat.setType("PRIVATE");
+        chat.setName(null);
         List<String> participants = new ArrayList<>();
-        participants.add(userIin1);
-        participants.add(userIin2);
-        newChat.setParticipants(participants);
-        newChat.setCreatedBy(userIin1);
-        return chatRoomRepository.save(newChat);
-    }
-
-    public ChatRoom createGroupChat(String name, List<String> participantIins, String creatorIin) {
-        // Ensure list of participants is unique and include creator
-        List<String> participants = new ArrayList<>(participantIins.stream().distinct().toList());
-        if (!participants.contains(creatorIin)) {
-            participants.add(creatorIin);
-        }
-        ChatRoom group = new ChatRoom();
-        group.setType("GROUP");
-        group.setName(name);
-        group.setParticipants(participants);
-        group.setCreatedBy(creatorIin);
-        return chatRoomRepository.save(group);
-    }
-
-    public ChatRoom getChatForUser(String chatId, String userIin) {
-        ChatRoom chat = chatRoomRepository.findById(chatId)
-                .orElseThrow(() -> new IllegalArgumentException("Chat not found"));
-        if (!chat.getParticipants().contains(userIin)) {
-            throw new IllegalArgumentException("Access denied to this chat");
-        }
+        participants.add(userId1);
+        participants.add(userId2);
+        chat.setParticipants(participants);
+        chat.setCreatedBy(null);
+        chatRepository.save(chat);
         return chat;
     }
 
-    public boolean isUserInChat(String chatId, String userIin) {
-        Optional<ChatRoom> opt = chatRoomRepository.findById(chatId);
-        return opt.isPresent() && opt.get().getParticipants().contains(userIin);
+    // Создать новый групповой чат
+    public Optional<Chat> createGroupChat(String name, List<String> participantIds, String creatorId) {
+        if (name == null || name.trim().isEmpty() || participantIds == null || participantIds.isEmpty()) {
+            return Optional.empty();
+        }
+        // Убеждаемся, что создатель включен
+        if (!participantIds.contains(creatorId)) {
+            participantIds.add(creatorId);
+        }
+        Chat chat = new Chat();
+        chat.setType("GROUP");
+        chat.setName(name);
+        chat.setParticipants(participantIds);
+        chat.setCreatedBy(creatorId);
+        chatRepository.save(chat);
+        return Optional.of(chat);
     }
 
-    public void deleteChat(String chatId) {
-        chatRoomRepository.findById(chatId).ifPresent(chat -> {
-            if ("GROUP".equals(chat.getType())) {
-                chatRoomRepository.deleteById(chatId);
-            }
-        });
+    // Удалить групповой чат (с проверкой прав)
+    public boolean deleteChat(String chatId, User currentUser) {
+        Optional<Chat> opt = chatRepository.findById(chatId);
+        if (opt.isEmpty()) {
+            return false;
+        }
+        Chat chat = opt.get();
+        if (!"GROUP".equals(chat.getType())) {
+            return false;
+        }
+        boolean isAdmin = currentUser.getRoles().contains("ADMIN");
+        boolean isTeacher = currentUser.getRoles().contains("TEACHER");
+        if (!(isAdmin || (isTeacher && currentUser.getId().equals(chat.getCreatedBy())))) {
+            return false;
+        }
+        // Удаляем все сообщения чата
+        messageRepository.deleteByChatId(chatId);
+        // Удаляем чат
+        chatRepository.delete(chat);
+        return true;
     }
 
-    public List<ChatRoom> getAllGroupChats() {
-        return chatRoomRepository.findByType("GROUP");
+    // Проверить участие пользователя в чате
+    public boolean isUserInChat(String chatId, String userId) {
+        Optional<Chat> opt = chatRepository.findById(chatId);
+        return opt.isPresent() && opt.get().getParticipants().contains(userId);
+    }
+
+    // Найти чат по ID для пользователя (только если состоит)
+    public Optional<Chat> getChatForUser(String chatId, String userId) {
+        Optional<Chat> opt = chatRepository.findById(chatId);
+        if (opt.isPresent() && opt.get().getParticipants().contains(userId)) {
+            return opt;
+        }
+        return Optional.empty();
+    }
+
+    // Все групповые чаты (для админа)
+    public List<Chat> getAllGroupChats() {
+        return chatRepository.findByType("GROUP");
+    }
+
+    // Групповые чаты, созданные данным пользователем
+    public List<Chat> getGroupChatsByCreator(String creatorId) {
+        return chatRepository.findByTypeAndCreatedBy("GROUP", creatorId);
     }
 }
