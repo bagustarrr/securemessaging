@@ -10,15 +10,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // Включаем простой брокер на префиксе /topic для рассылки сообщений подписчикам
-        config.enableSimpleBroker("/topic");
-        // Префикс /app для сообщений от клиента к @MessageMapping
-        config.setApplicationDestinationPrefixes("/app");
+        config.enableSimpleBroker("/topic"); // Клиенты подписываются сюда
+        config.setApplicationDestinationPrefixes("/app"); // Клиенты отправляют сюда
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Регистрируем WebSocket endpoint /ws с SockJS
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
