@@ -1,0 +1,11 @@
+spring:
+  data:
+    mongodb:
+      uri: 'mongodb+srv://bagustarrr:mq1strM69%21@cluster0.4lx0d.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+      database: securemsg
+  thymeleaf:
+    cache: false
+    mode: HTML
+  messages:
+    basename: messages
+    encoding: UTF-8

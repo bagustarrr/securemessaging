@@ -1,0 +1,66 @@
+/* Основные стили */
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+body.dark {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+/* Темная тема */
+.dark .card, .dark .modal-content {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+.dark .list-group-item {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+.dark .list-group-item.active {
+    background-color: #343a40;
+    color: #ffffff;
+}
+.dark .text-muted {
+    color: #cccccc !important;
+}
+.dark input, .dark textarea, .dark select {
+    background-color: #333;
+    color: #ffffff;
+    border: 1px solid #555;
+}
+.dark a {
+    color: #9ac;
+}
+.dark a:hover {
+    color: #acf;
+}
+
+/* Сообщения чата */
+.messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.message {
+    padding: 6px 10px;
+    border-radius: 12px;
+    max-width: 75%;
+}
+.my-message {
+    align-self: flex-end;
+    background-color: #0d6efd;
+    color: #ffffff;
+}
+.other-message {
+    align-self: flex-start;
+    background-color: #e9ecef;
+    color: #212529;
+}
+.dark .other-message {
+    background-color: #3a3b3c;
+    color: #e0e0e0;
+}
+.sender-name {
+    font-weight: 500;
+    margin-right: 5px;
+}

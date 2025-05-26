@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <title>404 Not Found</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body { text-align: center; padding: 50px; font-family: Arial, sans-serif; }
+        h1 { font-size: 3em; margin-bottom: 0.2em; }
+        p { font-size: 1.2em; }
+        .meme { max-width: 80%; height: auto; margin: 20px 0; }
+        .back-btn { text-decoration: none; color: #fff; background: #0d6efd; padding: 10px 20px; border-radius: 5px; }
+        .back-btn:hover { background: #0b5ed7; }
+    </style>
+</head>
+<body>
+<h1 th:text="#{error.404.oops}">Oops!</h1>
+<p th:text="#{error.404.message}">We can't seem to find the page you're looking for (404).</p>
+<img src="/img/error.png" class="meme"/>
+<p>
+    <a href="/" class="back-btn" th:text="#{error.404.back}">Go Back</a>
+</p>
+</body>
+</html>

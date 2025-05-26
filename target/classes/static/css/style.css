@@ -1,0 +1,77 @@
+/* Light/Dark theme backgrounds */
+body.dark {
+  background-color: #121212;
+  color: #eaeaea;
+}
+body.light {
+  background-color: #f8f9fa;
+  color: #212529;
+}
+/* Sidebar styling */
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+}
+.sidebar .list-group-item.active {
+  background-color: #0d6efd !important; /* highlight active chat */
+  border-color: #0d6efd;
+}
+.sidebar .list-group-item:hover {
+  background-color: #1a1e21;
+}
+.sidebar .list-group-item.active:hover {
+  background-color: #0b5ed7 !important;
+}
+@media (max-width: 767px) {
+  .sidebar {
+      position: fixed;
+      top: 0; left: -260px;
+      height: 100%;
+      overflow-y: auto;
+      transition: left 0.3s ease;
+      z-index: 1000;
+  }
+  .sidebar.open {
+      left: 0;
+  }
+  .chat-container {
+      flex-direction: column;
+  }
+}
+/* Chat content area */
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 90vh;
+}
+/* Messages container */
+.messages {
+  display: flex;
+  flex-direction: column;
+}
+/* Individual message bubble */
+.message {
+  max-width: 70%;
+  padding: 6px 10px;
+  margin: 4px 0;
+  border-radius: 12px;
+  font-size: 0.95em;
+  word-wrap: break-word;
+}
+/* My message alignment and style */
+.my-message {
+  align-self: flex-end;
+  background-color: #0d6efd;
+  color: #fff;
+}
+/* Other's message alignment and style (dark theme default) */
+.their-message {
+  align-self: flex-start;
+  background-color: #343a40;
+  color: #fff;
+}
+/* Other's message style for light theme (override background to light grey) */
+body.light .their-message {
+  background-color: #e9ecef;
+  color: #000;
+}
