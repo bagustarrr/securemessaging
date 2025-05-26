@@ -32,29 +32,29 @@ public class ChatController {
                            @RequestParam(required = false) String chatId,
                            Model model) {
         String currentUserId = currentUser.getId();
+
         // Все чаты пользователя
         List<Chat> chats = chatService.getChatsForUser(currentUserId);
         model.addAttribute("chats", chats);
         model.addAttribute("user", currentUser);
-        // Имена чатов (для групп - название, для личных - имя собеседника)
+
+        // Имена чатов
         Map<String, String> chatNames = new HashMap<>();
         for (Chat chat : chats) {
             if ("GROUP".equals(chat.getType())) {
                 chatNames.put(chat.getId(), chat.getName());
             } else if ("PRIVATE".equals(chat.getType())) {
-                String otherName = "";
                 for (String uid : chat.getParticipants()) {
                     if (!uid.equals(currentUserId)) {
-                        otherName = userService.getNameById(uid);
+                        chatNames.put(chat.getId(), userService.getNameById(uid));
                         break;
                     }
                 }
-                chatNames.put(chat.getId(), otherName);
             }
         }
         model.addAttribute("chatNames", chatNames);
 
-        // Если чат не указан и есть чаты - перенаправляем на первый
+        // Если чат не указан — редирект на первый
         if (chatId == null || chatId.isEmpty()) {
             if (!chats.isEmpty()) {
                 return "redirect:/chat?chatId=" + chats.get(0).getId();
@@ -63,7 +63,7 @@ public class ChatController {
             }
         }
 
-        // Проверяем доступ к запрошенному чату
+        // Проверка доступа
         Optional<Chat> chatOpt = chatService.getChatForUser(chatId, currentUserId);
         if (chatOpt.isEmpty()) {
             if (!chats.isEmpty()) {
@@ -73,34 +73,45 @@ public class ChatController {
             }
         }
 
-        // Готовим данные выбранного чата
+        // Данные выбранного чата
         Chat chat = chatOpt.get();
         model.addAttribute("chat", chat);
-        String chatDisplayName = chatNames.get(chat.getId());
-        model.addAttribute("currentChatName", chatDisplayName);
-        // Сообщения чата
+        model.addAttribute("currentChatName", chatNames.get(chat.getId()));
+
+        // Получение и расшифровка сообщений
         List<Message> messages = messageService.getMessagesByChatId(chat.getId());
         model.addAttribute("messages", messages);
 
         return "chat";
     }
 
-    // Создание нового личного чата (по email пользователя)
+    // Создание нового личного чата
     @PostMapping("/chat/new")
     public String newPersonalChat(@AuthenticationPrincipal User currentUser,
                                   @RequestParam("email") String otherEmail) {
         if (otherEmail == null || otherEmail.trim().isEmpty()) {
-            return "redirect:/chat";
+            return "redirect:/chat?error=nouser";
         }
+
         if (otherEmail.equalsIgnoreCase(currentUser.getEmail())) {
             return "redirect:/chat?error=self";
         }
+
         Optional<User> otherUserOpt = userService.findByEmail(otherEmail);
         if (otherUserOpt.isEmpty()) {
             return "redirect:/chat?error=nouser";
         }
+
         User otherUser = otherUserOpt.get();
+
+        // Проверка, существует ли уже такой чат
+        Chat existing = chatService.findPrivateChat(currentUser.getId(), otherUser.getId());
+        if (existing != null) {
+            return "redirect:/chat?error=exists";
+        }
+
         Chat chat = chatService.getOrCreatePrivateChat(currentUser.getId(), otherUser.getId());
         return "redirect:/chat?chatId=" + chat.getId();
     }
+
 }

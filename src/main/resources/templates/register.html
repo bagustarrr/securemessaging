@@ -11,13 +11,25 @@
 <div class="container py-5">
   <h2 class="text-center mb-4" th:text="#{register.title}">Register</h2>
 
-  <!-- Ошибки -->
-  <div th:if="${param.error == 'exists'}" class="alert alert-danger text-center" th:text="#{register.error.exists}">
-    User already exists.
+  <!-- Уведомления -->
+  <div th:if="${param.error != null and param.error[0] == 'exists'}"
+       class="alert alert-danger text-center"
+       th:text="#{register.error.email}">
+    Email already exists.
   </div>
-  <div th:if="${param.error == 'nomatch'}" class="alert alert-danger text-center" th:text="#{register.error.nomatch}">
+
+  <div th:if="${param.error != null and param.error[0] == 'nomatch'}"
+       class="alert alert-danger text-center"
+       th:text="#{register.error.passwords}">
     Passwords do not match.
   </div>
+
+  <div th:if="${param.error != null and param.error[0] == 'failed'}"
+       class="alert alert-danger text-center"
+       th:text="#{register.error.failed}">
+    Registration failed.
+  </div>
+
 
   <!-- Форма -->
   <div class="row justify-content-center">

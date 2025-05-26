@@ -110,4 +110,15 @@ public class ChatService {
     public List<Chat> getGroupChatsByCreator(String creatorId) {
         return chatRepository.findByTypeAndCreatedBy("GROUP", creatorId);
     }
+
+    public Chat findPrivateChat(String userId1, String userId2) {
+        List<Chat> chats1 = getChatsForUser(userId1);
+        for (Chat chat : chats1) {
+            if ("PRIVATE".equals(chat.getType()) &&
+                    chat.getParticipants().contains(userId2)) {
+                return chat;
+            }
+        }
+        return null;
+    }
 }

@@ -7,6 +7,7 @@ import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver;
+import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 import org.springframework.web.servlet.i18n.LocaleChangeInterceptor;
 
 import java.util.Locale;
@@ -14,19 +15,17 @@ import java.util.Locale;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // Используем AcceptHeaderLocaleResolver вместо SessionLocaleResolver
     @Bean
     public LocaleResolver localeResolver() {
-        AcceptHeaderLocaleResolver resolver = new AcceptHeaderLocaleResolver();
-        resolver.setDefaultLocale(Locale.forLanguageTag("ru")); // язык по умолчанию
+        SessionLocaleResolver resolver = new SessionLocaleResolver();
+        resolver.setDefaultLocale(Locale.forLanguageTag("ru"));
         return resolver;
     }
 
-    // Перехватчик, позволяющий менять язык через параметр lang (например, ?lang=en)
     @Bean
     public LocaleChangeInterceptor localeChangeInterceptor() {
         LocaleChangeInterceptor interceptor = new LocaleChangeInterceptor();
-        interceptor.setParamName("lang"); // параметр в URL
+        interceptor.setParamName("lang");
         return interceptor;
     }
 
@@ -34,6 +33,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
     }
+
 
     // Подключение файлов локализации messages.properties
     @Bean

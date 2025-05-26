@@ -15,13 +15,11 @@ public class AuthController {
         this.userService = userService;
     }
 
-    // Главная страница -> перенаправление на /chat
     @GetMapping("/")
     public String home() {
         return "redirect:/chat";
     }
 
-    // Страница входа (если уже вошел — редирект на чат)
     @GetMapping("/login")
     public String loginPage(Authentication authentication) {
         if (authentication != null &&
@@ -32,13 +30,14 @@ public class AuthController {
         return "login";
     }
 
-    // Страница регистрации
     @GetMapping("/register")
     public String registerPage() {
+        System.out.println("➡️ /register controller called");
         return "register";
     }
 
-    // Обработка формы регистрации
+
+
     @PostMapping("/register")
     public String registerUser(@RequestParam String name,
                                @RequestParam String email,
@@ -47,9 +46,15 @@ public class AuthController {
         if (!password.equals(confirmPassword)) {
             return "redirect:/register?error=nomatch";
         }
-        if (userService.register(name, email, password).isEmpty()) {
+
+        if (userService.findByEmail(email).isPresent()) {
             return "redirect:/register?error=exists";
         }
+
+        if (userService.register(name, email, password).isEmpty()) {
+            return "redirect:/register?error=failed";
+        }
+
         return "redirect:/login?registered";
     }
 }

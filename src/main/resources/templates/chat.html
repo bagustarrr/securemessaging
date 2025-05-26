@@ -13,6 +13,17 @@
         /*]]>*/
     </script>
 </head>
+
+<div th:if="${param.error}" class="alert alert-danger text-center">
+  <span th:switch="${param.error[0]}">
+    <span th:case="'nouser'" th:text="#{chat.error.nouser}">User not found.</span>
+    <span th:case="'exists'" th:text="#{chat.error.exists}">Chat already exists.</span>
+    <span th:case="'self'" th:text="#{chat.error.self}">You cannot create a chat with yourself.</span>
+    <span th:case="*">Unknown error.</span>
+  </span>
+</div>
+
+
 <body th:classappend="${user.theme=='dark'} ? 'dark' : ''">
 <nav class="navbar navbar-expand-lg" th:classappend="${user.theme=='dark'} ? ' navbar-dark bg-dark' : ' navbar-light bg-light'">
     <div class="container-fluid">
